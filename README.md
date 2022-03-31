@@ -14,10 +14,11 @@ Also a serverless architecture promotes workloads that are:
 
 ![Application architecture](./images/app_architecture.png)
 
-1. As soon as new file lands in on-premise server mount point location (A mount point is a on premise directory to which NFS share is attached), aws file gateway transfers the file
+1. Client's application writes the required file to client's on premise server s3 mount location.
+2. As soon as new file lands in on-premise server mount point location (A mount point is a on premise directory to which NFS share is attached), aws file gateway transfers the file
 to configured s3 bucket.
-2. As the file is created/available in s3 bucket, S3 sends an event to Lambda function with the file details.
-3. The above Lambda function starts a Glue Job to process the file 
-4. Glue job does the required processing to write the final output to S3 bucket. An EventBridge rule triggered if the glue job fails. 
-5. Event bridge rule calls a Lambda function to format and publish a failure message to an SNS topic. 
-6. Lambda function publishes a failure message to sns topic. All subscribers of sns topic will get the glue job failure notification.
+3. As the file is created/available in s3 bucket, S3 sends an event to Lambda function with the file details.
+4. The above Lambda function starts a Glue Job to process the file 
+5. Glue job does the required processing to write the final output to S3 bucket. An EventBridge rule triggered if the glue job fails. 
+6. Event bridge rule calls a Lambda function to format and publish a failure message to an SNS topic. 
+7. Lambda function publishes a failure message to sns topic. All subscribers of sns topic will get the glue job failure notification.
