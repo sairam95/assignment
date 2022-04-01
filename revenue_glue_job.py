@@ -131,11 +131,11 @@ class SearchKeywordRevenue:
         for given hit level data.
 
          In detailed series of events:
-            1) explodes the single product_list column which os ";" seperated to multiiple columns to extract revenue.
+            1) explodes the single product_list column which hos ";" seperated to multiiple columns to extract revenue.
             2) extracts the domain and search keyword respectively from the referrer url.
             3) creates a new column event_type which marks a record as one of following categories
               "search", "order complete", "other" and filters the data for "search"
-            4) ranks the data for each ip address based on order of events.
+            4) ranks the data for each ip address based on order of events performed by user.
         Args:
             df: returns the spark dataframe with search and order complete event rows.
 
@@ -155,7 +155,8 @@ class SearchKeywordRevenue:
         domain_search_keyword_df = transformed_df.withColumn("domain", udfextractDomains("referrer")) \
             .withColumn("searchKeyword", udfextractSearchKeyword("referrer", "domain"))
 
-        # filtering the dataframe with records for just search event and order completion event
+        # creating an event_type column for each row with one of the following possible values
+        # "search", "order complete", "other".
         domain_search_keyword_df = domain_search_keyword_df.withColumn("event_type", f.when(
             ~f.col("domain").isNull() & ~f.col("searchKeyword").isNull(), "search")
                                                                        .when(f.col("event_list") == 1, "order complete")
@@ -164,7 +165,7 @@ class SearchKeywordRevenue:
         search_order_comp_df = domain_search_keyword_df.filter(
             (f.col("event_type") == "search") | (f.col("event_type") == "order complete"))
 
-        # ranking the search and order complete events for each ip address by hite time. Later this rank will be used
+        # ranking the search and order complete events for each ip address by hit time. Later this rank will be used
         # to calculate the revenue
         window_spec = Window.partitionBy("ip").orderBy("hit_time_gmt")
         ranked_df = search_order_comp_df.withColumn('total_revenue', f.col('total_revenue').cast("int")) \
@@ -187,9 +188,12 @@ class SearchKeywordRevenue:
         # Filtering the order complete event rows
         spark.sql("select ip, domain, searchKeyword, total_revenue, rank  from hit_level_data where event_type='order "
                   "complete'").createOrReplaceTempView("order_complete_df")
+        #
         revenue_df = spark.sql("""select sed.domain as search_engine_domain, sed.searchKeyword as search_keyword, 
-        sum(coalesce(ocd.total_revenue, 0)) as revenue from search_event_df sed left join order_complete_df ocd on 
-        sed.ip = ocd.ip and sed.rank +1 = ocd.rank group by sed.domain, sed.searchKeyword order by revenue desc""")
+        sum(coalesce(ocd.total_revenue, 0)) as revenue 
+        from search_event_df sed left join order_complete_df ocd on sed.ip = ocd.ip and sed.rank +1 = ocd.rank 
+        group by sed.domain, sed.searchKeyword 
+        order by revenue desc""")
         return revenue_df
 
     def write_df_to_s3(self, df):
@@ -202,7 +206,7 @@ class SearchKeywordRevenue:
 
         """
         pandas_df = df.toPandas()
-        pandas_df.to_csv(self.output_file_location, sep='\t', encoding='utf-8')
+        pandas_df.to_csv(self.output_file_location, sep='\t', encoding='utf-8', index=False)
 
     def process_file(self):
         """
@@ -214,6 +218,7 @@ class SearchKeywordRevenue:
         transformed_df = self.transform_df(df)
         revenue_df = self.calculate_revenue(transformed_df)
         self.write_df_to_s3(revenue_df)
+
 
 input_file_location = "s3a://{0}/{1}".format(args['s3_bucket'], args['s3_key'])
 output_file_location = "s3a://adobe-outbound/{0}/{0}_SearchKeywordPerformance.tab".format(str(date.today()))

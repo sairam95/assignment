@@ -1,5 +1,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "CF Template to create the infrastructure required for application."
+Parameters:
+  InboundBucketName:
+    Type: String
 Resources:
     SNSTopic:
         Type: "AWS::SNS::Topic"
@@ -211,7 +214,7 @@ Resources:
         Properties:
             Description: ""
             FunctionName: "adobe_exercise_lambda_glue_trigger_2"
-            Handler: "lambda_function.lambda_handler"
+            Handler: "index.lambda_handler"
             Architectures:
               - "x86_64"
             Code:
@@ -250,7 +253,7 @@ Resources:
         Properties:
             Description: ""
             FunctionName: "adobe_glue_job_failure_notification_2"
-            Handler: "lambda_function.lambda_handler"
+            Handler: "index.lambda_handler"
             Architectures:
               - "x86_64"
             Code:
@@ -298,13 +301,13 @@ Resources:
             TracingConfig:
                 Mode: "PassThrough"
 
-#    LambdaPermission:
-#        Type: "AWS::Lambda::Permission"
-#        Properties:
-#            Action: "lambda:InvokeFunction"
-#            FunctionName: !GetAtt LambdaFunction.Arn
-#            Principal: "s3.amazonaws.com"
-#            SourceArn: !Sub "arn:aws:s3:::${S3Bucket2}"
+    LambdaPermission:
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            Action: "lambda:InvokeFunction"
+            FunctionName: !GetAtt LambdaFunction.Arn
+            Principal: "s3.amazonaws.com"
+            SourceArn: !Sub "arn:aws:s3:::${InboundBucketName}"
 
     LambdaPermission2:
         Type: "AWS::Lambda::Permission"
@@ -326,20 +329,22 @@ Resources:
                         SSEAlgorithm: "AES256"
                     BucketKeyEnabled: false
 
-#    S3Bucket2:
-#        Type: "AWS::S3::Bucket"
-#        Properties:
-#            BucketName: "adobe-s3-2"
-#            BucketEncryption:
-#                ServerSideEncryptionConfiguration:
-#                  -
-#                    ServerSideEncryptionByDefault:
-#                        SSEAlgorithm: "AES256"
-#                    BucketKeyEnabled: false
-#            NotificationConfiguration:
-#                LambdaConfigurations:
-#                  - Event: "s3:ObjectCreated:Put"
-#                    Function: !GetAtt LambdaFunction.Arn
+    S3Bucket2:
+        Type: "AWS::S3::Bucket"
+        DependsOn:
+          - LambdaPermission
+        Properties:
+            BucketName: !Ref InboundBucketName
+            BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                  -
+                    ServerSideEncryptionByDefault:
+                        SSEAlgorithm: "AES256"
+                    BucketKeyEnabled: false
+            NotificationConfiguration:
+                LambdaConfigurations:
+                  - Event: "s3:ObjectCreated:Put"
+                    Function: !GetAtt LambdaFunction.Arn
     EventsRule:
         Type: "AWS::Events::Rule"
         Properties:
