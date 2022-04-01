@@ -13,7 +13,7 @@ import re
 from datetime import date
 
 # @params: [JOB_NAME]
-args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+args = getResolvedOptions(sys.argv, ['JOB_NAME', 's3_bucket', 's3_key'])
 
 sc = SparkContext()
 glueContext = GlueContext(sc)
@@ -215,9 +215,7 @@ class SearchKeywordRevenue:
         revenue_df = self.calculate_revenue(transformed_df)
         self.write_df_to_s3(revenue_df)
 
-
-# input_file_location = "s3a://adobe-s3/data.tsv"
-input_file_location = "s3a://adobe-s3/data.tsv"
+input_file_location = "s3a://{0}/{1}".format(args['s3_bucket'], args['s3_key'])
 output_file_location = "s3a://adobe-outbound/{0}/{0}_SearchKeywordPerformance.tab".format(str(date.today()))
 skr = SearchKeywordRevenue(input_file_location=input_file_location, output_file_location=output_file_location)
 skr.process_file()

@@ -1,0 +1,389 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "CF Template to create the infrastructure required for application."
+Resources:
+    SNSTopic:
+        Type: "AWS::SNS::Topic"
+        Properties:
+            DisplayName: ""
+            TopicName: "adobe_execise_sns_2"
+
+    SNSTopic2:
+        Type: "AWS::SNS::Topic"
+        Properties:
+            DisplayName: ""
+            TopicName: "adobe_glue_job_failure_2"
+
+    SNSSubscription:
+        Type: "AWS::SNS::Subscription"
+        Properties:
+            TopicArn: !Ref SNSTopic2
+            Endpoint: "saiseetharamnomula@gmail.com"
+            Protocol: "email"
+            Region: !Ref AWS::Region
+
+    SNSTopicPolicy:
+        Type: "AWS::SNS::TopicPolicy"
+        Properties:
+            PolicyDocument: !Sub "{\"Version\":\"2008-10-17\",\"Id\":\"__default_policy_ID\",\"Statement\":[{\"Sid\":\"__default_statement_ID\",\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"*\"},\"Action\":[\"SNS:GetTopicAttributes\",\"SNS:SetTopicAttributes\",\"SNS:AddPermission\",\"SNS:RemovePermission\",\"SNS:DeleteTopic\",\"SNS:Subscribe\",\"SNS:ListSubscriptionsByTopic\",\"SNS:Publish\"],\"Resource\":\"${SNSTopic}\",\"Condition\":{\"StringEquals\":{\"AWS:SourceOwner\":\"${AWS::AccountId}\"}}}]}"
+            Topics:
+              - !Ref SNSTopic
+
+    SNSTopicPolicy2:
+        Type: "AWS::SNS::TopicPolicy"
+        Properties:
+            PolicyDocument: !Sub "{\"Version\":\"2008-10-17\",\"Id\":\"__default_policy_ID\",\"Statement\":[{\"Sid\":\"__default_statement_ID\",\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"*\"},\"Action\":[\"SNS:Publish\",\"SNS:RemovePermission\",\"SNS:SetTopicAttributes\",\"SNS:DeleteTopic\",\"SNS:ListSubscriptionsByTopic\",\"SNS:GetTopicAttributes\",\"SNS:AddPermission\",\"SNS:Subscribe\"],\"Resource\":\"${SNSTopic2}\",\"Condition\":{\"StringEquals\":{\"AWS:SourceOwner\":\"${AWS::AccountId}\"}}},{\"Sid\":\"__console_sub_0\",\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"*\"},\"Action\":\"SNS:Subscribe\",\"Resource\":\"${SNSTopic2}\"}]}"
+            Topics:
+              - !Ref SNSTopic2
+
+    IAMPolicy:
+        Type: "AWS::IAM::Policy"
+        Properties:
+            PolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":[\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::databricks-prod-public-cfts/*\"],\"Effect\":\"Allow\"},{\"Action\":[\"s3:GetObject\",\"s3:PutObject\",\"s3:DeleteObject\"],\"Resource\":[\"arn:aws:s3:::databricks-workspace-stack-lambdazipsbucket-sni7q4u0bua/*\"],\"Effect\":\"Allow\"}]}"
+            Roles:
+              - "databricks-workspace-stack-CopyZipsRole-U9IYIF6J5DCV"
+            PolicyName: "lambda-copier_2"
+
+    IAMRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/"
+            RoleName: "adobeGlueServicerole_2"
+            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"glue.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns:
+              - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+              - "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+            Description: "Allows Glue to call AWS services on your behalf. "
+
+    IAMRole2:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/"
+            RoleName: "lambdaGlueTrigger_2"
+            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns:
+              - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+              - "arn:aws:iam::aws:policy/AmazonSNSFullAccess"
+              - !Sub "arn:aws:iam::${AWS::AccountId}:policy/triggerGlueJob"
+            Description: "Allows Lambda functions to call AWS services on your behalf."
+
+    IAMRole3:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/"
+            RoleName: "s3fullaccess_2"
+            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"s3.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns:
+              - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+            Description: "Allows S3 to call AWS services on your behalf."
+    EC2Instance:
+        Type: "AWS::EC2::Instance"
+        Properties:
+            ImageId: "ami-0c02fb55956c7d316"
+            InstanceType: "t2.micro"
+            KeyName: "adobe_exercise_keypair"
+            AvailabilityZone: !Sub "${AWS::Region}c"
+            Tenancy: "default"
+            SubnetId: "subnet-09a18fb184b2e3ebf"
+            EbsOptimized: false
+            SecurityGroupIds:
+              - !Ref EC2SecurityGroup
+            SourceDestCheck: true
+            BlockDeviceMappings:
+              -
+                DeviceName: "/dev/xvda"
+                Ebs:
+                    Encrypted: false
+                    VolumeSize: 8
+                    VolumeType: "gp2"
+                    DeleteOnTermination: true
+            Tags:
+              -
+                Key: "Name"
+                Value: "linux-server-2"
+            HibernationOptions:
+                Configured: false
+            EnclaveOptions:
+                Enabled: false
+
+    EC2Instance2:
+        Type: "AWS::EC2::Instance"
+        Properties:
+            ImageId: "ami-056f71af0f2ca2daa"
+            InstanceType: "m4.large"
+            KeyName: "adobe_exercise_keypair"
+            AvailabilityZone: !Sub "${AWS::Region}a"
+            Tenancy: "default"
+            SubnetId: "subnet-013501da42f49c7d6"
+            EbsOptimized: true
+            SecurityGroupIds:
+              - !Ref EC2SecurityGroup
+            SourceDestCheck: true
+            BlockDeviceMappings:
+              -
+                DeviceName: "/dev/xvda"
+                Ebs:
+                    Encrypted: false
+                    VolumeSize: 80
+                    VolumeType: "gp3"
+                    DeleteOnTermination: true
+              -
+                DeviceName: "/dev/sdb"
+                Ebs:
+                    Encrypted: false
+                    VolumeSize: 150
+                    VolumeType: "gp2"
+                    DeleteOnTermination: true
+            Tags:
+              -
+                Key: "Name"
+                Value: "gateway-server-2"
+            HibernationOptions:
+                Configured: false
+            EnclaveOptions:
+                Enabled: false
+
+    EC2SecurityGroup:
+        Type: "AWS::EC2::SecurityGroup"
+        Properties:
+            GroupDescription: "launch-wizard-1 created 2022-03-28T23:51:38.261-04:00"
+            GroupName: "adobe_exercise_sg_2"
+            VpcId: "vpc-03760ee22afe8df56"
+            SecurityGroupIngress:
+              -
+                CidrIp: "0.0.0.0/0"
+                FromPort: 80
+                IpProtocol: "tcp"
+                ToPort: 80
+              -
+                CidrIpv6: "::/0"
+                FromPort: 80
+                IpProtocol: "tcp"
+                ToPort: 80
+              -
+                CidrIp: "0.0.0.0/0"
+                Description: ""
+                FromPort: 22
+                IpProtocol: "tcp"
+                ToPort: 22
+              -
+                CidrIpv6: "::/0"
+                Description: ""
+                FromPort: 22
+                IpProtocol: "tcp"
+                ToPort: 22
+              -
+                CidrIp: "0.0.0.0/0"
+                FromPort: 443
+                IpProtocol: "tcp"
+                ToPort: 443
+              -
+                CidrIpv6: "::/0"
+                FromPort: 443
+                IpProtocol: "tcp"
+                ToPort: 443
+              -
+                CidrIp: "0.0.0.0/0"
+                FromPort: 2049
+                IpProtocol: "tcp"
+                ToPort: 2049
+              -
+                CidrIpv6: "::/0"
+                FromPort: 2049
+                IpProtocol: "tcp"
+                ToPort: 2049
+            SecurityGroupEgress:
+              -
+                CidrIp: "0.0.0.0/0"
+                IpProtocol: "-1"
+
+    #Allocate an Elastic IP in your Account
+    DemoElasticIP:
+      Type: AWS::EC2::EIP
+      Properties:
+        Domain: vpc
+        InstanceId: !Ref EC2Instance
+
+    LambdaFunction:
+        Type: "AWS::Lambda::Function"
+        Properties:
+            Description: ""
+            FunctionName: "adobe_exercise_lambda_glue_trigger_2"
+            Handler: "lambda_function.lambda_handler"
+            Architectures:
+              - "x86_64"
+            Code:
+                ZipFile: |
+                  import boto3
+                  import json
+                  import urllib.parse
+                  import boto3
+                  print('Loading function')
+
+                  def lambda_handler(_event, _context):
+
+                      glue = boto3.client('glue')
+                      gluejobname = "adobe_exercise_glue_job"
+                      bucket = _event['Records'][0]['s3']['bucket']['name']
+                      key = urllib.parse.unquote_plus(_event['Records'][0]['s3']['object']['key'], encoding='utf-8')
+                      try:
+                          print("printing bucket")
+                          print(bucket)
+                          print(key)
+                          runId = glue.start_job_run(JobName=gluejobname, Arguments={'--s3_bucket':bucket, '--s3_key':key})
+                          status = glue.get_job_run(JobName=gluejobname, RunId=runId['JobRunId'])
+                          print("Job Status : ", status['JobRun']['JobRunState'])
+                      except Exception as e:
+                          print(e)
+                          raise
+            MemorySize: 128
+            Role: !GetAtt IAMRole2.Arn
+            Runtime: "python3.7"
+            Timeout: 3
+            TracingConfig:
+                Mode: "PassThrough"
+
+    LambdaFunction2:
+        Type: "AWS::Lambda::Function"
+        Properties:
+            Description: ""
+            FunctionName: "adobe_glue_job_failure_notification_2"
+            Handler: "lambda_function.lambda_handler"
+            Architectures:
+              - "x86_64"
+            Code:
+              ZipFile: |
+                #
+                #Receive EventBridge and S3 events and format their contents into a message to publish to an SNS topic
+                #
+                import boto3
+
+                sns = boto3.client('sns')
+
+                # Determine AWS event type for relevant events
+                def get_event_source(event):
+                    if 'Records' in event and 'eventSource' in event['Records'][0] and event['Records'][0]['eventSource'] == 'aws:s3': 
+                        return 's3'
+                    elif 'source' in event and event['source'] == 'aws.glue':
+                        return 'glue'
+                    else:
+                        return 'unknown'
+
+                # Compose and publish SNS from AWS event info
+                def lambda_handler(event, context):
+                    sns_message = ''
+                    source = get_event_source(event)
+
+                    if source == 's3':
+                        bucket_name = event['Records'][0]['s3']['bucket']['name']
+                        file_name = event['Records'][0]['s3']['object']['key']
+                        sns_message = 'The error file "' + file_name + '" has landed in S3 bucket "' + bucket_name + '".'
+                    elif source == 'glue':
+                        job_name = event['detail']['jobName']
+                        state = event['detail']['state']
+                        time = event['time']
+                        sns_message = 'Glue job "' + job_name + '" has ' + state + ' at ' + time + '.'
+
+                    if sns_message != '':
+                        sns.publish(
+                            Message = sns_message,
+                            TargetArn = 'arn:aws:sns:us-east-1:635547918647:adobe_glue_job_failure'
+                        )
+            MemorySize: 128
+            Role: !GetAtt IAMRole2.Arn
+            Runtime: "python3.9"
+            Timeout: 3
+            TracingConfig:
+                Mode: "PassThrough"
+
+#    LambdaPermission:
+#        Type: "AWS::Lambda::Permission"
+#        Properties:
+#            Action: "lambda:InvokeFunction"
+#            FunctionName: !GetAtt LambdaFunction.Arn
+#            Principal: "s3.amazonaws.com"
+#            SourceArn: !Sub "arn:aws:s3:::${S3Bucket2}"
+
+    LambdaPermission2:
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            Action: "lambda:InvokeFunction"
+            FunctionName: !GetAtt LambdaFunction2.Arn
+            Principal: "events.amazonaws.com"
+            SourceArn: !GetAtt EventsRule.Arn
+
+
+    S3Bucket:
+        Type: "AWS::S3::Bucket"
+        Properties:
+            BucketName: "adobe-outbound-2"
+            BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                  -
+                    ServerSideEncryptionByDefault:
+                        SSEAlgorithm: "AES256"
+                    BucketKeyEnabled: false
+
+#    S3Bucket2:
+#        Type: "AWS::S3::Bucket"
+#        Properties:
+#            BucketName: "adobe-s3-2"
+#            BucketEncryption:
+#                ServerSideEncryptionConfiguration:
+#                  -
+#                    ServerSideEncryptionByDefault:
+#                        SSEAlgorithm: "AES256"
+#                    BucketKeyEnabled: false
+#            NotificationConfiguration:
+#                LambdaConfigurations:
+#                  - Event: "s3:ObjectCreated:Put"
+#                    Function: !GetAtt LambdaFunction.Arn
+    EventsRule:
+        Type: "AWS::Events::Rule"
+        Properties:
+            Name: "adobe_glue_job_failue_2"
+            EventPattern: |
+              {
+                "source": ["aws.glue"],
+                "detail-type": ["Glue Job State Change"],
+                "detail": {
+                  "jobName": ["adobe_exercise_glue_job"],
+                  "state": ["FAILED"]
+                }
+              }
+            State: "ENABLED"
+            Targets:
+              -
+                Arn: !GetAtt LambdaFunction2.Arn
+                Id: "Ida75d3999-17fc-43ed-b581-352175df4753"
+            EventBusName: "default"
+
+    GlueJob:
+        Type: "AWS::Glue::Job"
+        Properties:
+            Name: "adobe_exercise_glue_job_2"
+            Description: ""
+            Role: !GetAtt IAMRole.Arn
+            ExecutionProperty:
+                MaxConcurrentRuns: 1
+            Command:
+                Name: "glueetl"
+                ScriptLocation: !Sub "s3://adobe-app-code/revenue_glue_job.py"
+                PythonVersion: "3"
+            DefaultArguments:
+                --TempDir: !Sub "s3://aws-glue-assets-${AWS::AccountId}-${AWS::Region}/temporary/"
+                --class: "GlueApp"
+                --enable-continuous-cloudwatch-log: "true"
+                --enable-glue-datacatalog: "true"
+                --enable-metrics: "true"
+                --enable-spark-ui: "true"
+                --job-bookmark-option: "job-bookmark-enable"
+                --job-language: "python"
+                --spark-event-logs-path: !Sub "s3://aws-glue-assets-${AWS::AccountId}-${AWS::Region}/sparkHistoryLogs/"
+            MaxRetries: 0
+            Timeout: 20
+            GlueVersion: "3.0"
+            NumberOfWorkers: 5
+            WorkerType: "G.1X"
