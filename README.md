@@ -53,6 +53,7 @@ Cloud Formation template generates the following resources:
 - <b>Event Bridge</b> - Rule to trigger a lambda function if the glue job fails.
 
 ---
+
 ### 5. Application Performance
 
 AWS serverless services, including Lambda, are fault-tolerant and designed to handle failures. In the case of Lambda, 
@@ -65,10 +66,23 @@ So based on client's file size no of workers for glue job can be configured acco
 As mentioned in the requirements that client can send up to 10 GB file, A maximum of 2 G1.X worker types can be used in 
 glue configuration. Each worker maps to 1 DPU (4 vCPU, 16 GB of memory, 64 GB disk), and provides 1 executor per worker.
 
+---
+
+### 6. Conclusion
 
 ---
-### 6. Future Considerations
 
-Current application doesn't track the status of a given run. So in case of any failure in glue job
-or lambda function the workflow is not retired for failed workflows. so the application can
-be extended to develop the pipeline for retries and failures.
+### 7. Future Considerations
+
+Current application doesn't track the status of a given file run. So in case of any failure in custom code of 
+glue job or lambda function the workflow is not retired. In this case the application can be extended to develop 
+the pipeline for retries and failures using below extended architecture highlighted in red. 
+
+![retry architecture](./images/retry_architecture.png)
+
+
+1) A logging table in postgres/dynamo db can be used to track/log the status of the 
+workflow for each file run at every stage. 
+2) A separate process in lambda function can be run on a scheduled basis which reads the logging table to figure out all the failed runs based on
+run status 
+3) Lambda will have logic for re-triggering the glue jobs for all failed runs.
