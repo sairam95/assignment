@@ -2,6 +2,7 @@
 
 Implementing a python application with at least one class using AWS infrastructure to process the client's hit level data. 
 The final output should be a tab delimited file with revenue generated per each search word per domain.
+
 ---
 
 ### 2. Design Considerations 
