@@ -50,7 +50,7 @@ Resources:
         Type: "AWS::IAM::Role"
         Properties:
             Path: "/"
-            RoleName: "adobeGlueServicerole_2"
+            RoleName: "client_glue_service_role"
             AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"glue.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
             MaxSessionDuration: 3600
             ManagedPolicyArns:
@@ -62,7 +62,7 @@ Resources:
         Type: "AWS::IAM::Role"
         Properties:
             Path: "/"
-            RoleName: "lambdaGlueTrigger_2"
+            RoleName: "client_lambda_service_role"
             AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
             MaxSessionDuration: 3600
             ManagedPolicyArns:
@@ -75,7 +75,7 @@ Resources:
         Type: "AWS::IAM::Role"
         Properties:
             Path: "/"
-            RoleName: "s3fullaccess_2"
+            RoleName: "client_s3_fullaccess"
             AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"s3.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
             MaxSessionDuration: 3600
             ManagedPolicyArns:
@@ -105,7 +105,7 @@ Resources:
             Tags:
               -
                 Key: "Name"
-                Value: "linux-server-2"
+                Value: "client-linux-server"
             HibernationOptions:
                 Configured: false
             EnclaveOptions:
@@ -142,7 +142,7 @@ Resources:
             Tags:
               -
                 Key: "Name"
-                Value: "gateway-server-2"
+                Value: "client-gateway-server"
             HibernationOptions:
                 Configured: false
             EnclaveOptions:
@@ -152,7 +152,7 @@ Resources:
         Type: "AWS::EC2::SecurityGroup"
         Properties:
             GroupDescription: "launch-wizard-1 created 2022-03-28T23:51:38.261-04:00"
-            GroupName: "adobe_exercise_sg_2"
+            GroupName: "client_sg"
             VpcId: "vpc-03760ee22afe8df56"
             SecurityGroupIngress:
               -
@@ -213,7 +213,7 @@ Resources:
         Type: "AWS::Lambda::Function"
         Properties:
             Description: ""
-            FunctionName: "adobe_exercise_lambda_glue_trigger_2"
+            FunctionName: "client_glue_job_trigger"
             Handler: "index.lambda_handler"
             Architectures:
               - "x86_64"
@@ -252,7 +252,7 @@ Resources:
         Type: "AWS::Lambda::Function"
         Properties:
             Description: ""
-            FunctionName: "adobe_glue_job_failure_notification_2"
+            FunctionName: "client_glue_job_failure"
             Handler: "index.lambda_handler"
             Architectures:
               - "x86_64"
@@ -321,7 +321,7 @@ Resources:
     S3Bucket:
         Type: "AWS::S3::Bucket"
         Properties:
-            BucketName: "adobe-outbound-2"
+            BucketName: "client-outbound"
             BucketEncryption:
                 ServerSideEncryptionConfiguration:
                   -
@@ -348,7 +348,7 @@ Resources:
     EventsRule:
         Type: "AWS::Events::Rule"
         Properties:
-            Name: "adobe_glue_job_failue_2"
+            Name: "client_glue_job_failure_event"
             EventPattern: |
               {
                 "source": ["aws.glue"],
@@ -368,7 +368,7 @@ Resources:
     GlueJob:
         Type: "AWS::Glue::Job"
         Properties:
-            Name: "adobe_exercise_glue_job_2"
+            Name: "client_revenue_glue_job"
             Description: ""
             Role: !GetAtt IAMRole.Arn
             ExecutionProperty:

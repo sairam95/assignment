@@ -75,7 +75,7 @@ glue configuration. Each worker maps to 1 DPU (4 vCPU, 16 GB of memory, 64 GB di
 ### 7. Future Considerations
 
 Current application doesn't track the status of a given file run. So in case of any failure in custom code of 
-glue job or lambda function the workflow is not retired. In this case the application can be extended to develop 
+glue job or lambda function, the workflow is not retired. In this case the application can be extended to develop 
 the pipeline for retries and failures using below extended architecture highlighted in red. 
 
 ![retry architecture](./images/retry_architecture.png)
