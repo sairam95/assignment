@@ -3,6 +3,7 @@
 Implementing a python application with at least one class using AWS infrastructure to process the client's hit level data. 
 The final output should be a tab delimited file with revenue generated per each search word per domain.
 
+___
 
 ### 2. Design Considerations
 An event driven serverless ETL architecture is chosen to process the client files as it reduces complexity by decomposing the 
@@ -19,6 +20,8 @@ This removes heavy coordination between producer and consumer services, speeding
 according to the workload
 - <b>Cost-efficient</b>: Event-driven architectures are push-based, so everything happens on-demand when an event is generated.
 This way, we are not paying for continuous polling to check for an event. This means less network bandwidth consumption, less resource consumption
+
+___
 
 ### 3. Event driven architecture of ETL application
 
@@ -38,6 +41,8 @@ In short:
 - event producer: Inbound s3 bucket object put's.
 - event router: lambda function.
 - event consumer: glue job.
+
+___
 
 ### 4. Deploying the solution with AWS Cloud Formation. 
 Except for storage gateway and fileshare all the other required resources can be created by deploying the AWS CloudFormation stacks i.e. [stack_1](cf_templates/cf_app_infra_stack_1.yml) and [stack 2](cf_templates/cf_app_infra_stack_2.yml).
@@ -64,6 +69,7 @@ generates the following resources:
 [stack_2](cf_templates/cf_app_infra_stack_2.yml) 
 ![stack2_output](./images/stack2_output.png)
 
+___
 
 ### 5. Application Output
 As shown in below images, final output of glue job is a tab delimited file written to an outbound s3 bucket folder. The folder name is in yyyy-mm-dd format 
@@ -72,11 +78,14 @@ and file name is in "[yyyy-mm-dd]_SearchKeywordPerformance.tab" format ("yyyy-mm
 ![file_output_name](./images/file_output_name.png) 
 ![file_output_format](./images/file_output_format.png) 
 
+___
 
 ### 6. Monitoring and Logging
 CloudWatch Metrics and logs are used to  monitor and capture the runtime metrics and log statements of the application. 
 CloudWatch Metrics brings observability into the application by providing details on performance of the system
 Also, for every run a log stream is automatically generated and all the run details are present in the log stream.
+
+___
 
 ### 7. Application Performance
 
@@ -90,6 +99,7 @@ So based on client's file size no of workers for glue job can be configured acco
 As mentioned in the requirements that client can send up to 10 GB file, A maximum of 2 G1.X worker types can be used in 
 glue configuration. Each worker maps to 1 DPU (4 vCPU, 16 GB of memory, 64 GB disk), and provides 1 executor per worker.
 
+___
 
 ### 8. Conclusion
 
@@ -97,6 +107,8 @@ event-driven architecture is used to provide access to near-real-time informatio
 generated per each search term. This will help business to make faster decisions on fresh data.
 Not only that application checks many boxes related to lower cost, scalability and faster 
 delivery (application is built within matter of days).
+
+___
 
 ### 9. Future Enhancements
 1) Manual deployments of cloud formation templates can be automated using a build system like jenkins/GitHub 
