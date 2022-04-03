@@ -1,4 +1,4 @@
-### 1. Goals
+### 1. Business Problem
 
 Implementing a python application with at least one class using AWS infrastructure to process the client's hit level data. 
 The final output should be a tab delimited file with revenue generated per each search word per domain.
@@ -11,9 +11,8 @@ workflow with easier operational management and reduced operational cost. They a
 the ETL pipelines to respond in near-real time, delivering fresh data to business users. Also, a serverless architecture promotes 
 workloads that are:
 
-- <b>Loosely coupled</b>: Event consumers only need to know the format of the event. They don't worry 
-about who is sending the data. Similarly, event producers push the event to routers in required format and don't worry 
-about consumer of the event.
+- <b>Loosely coupled</b>: Event consumers only need to know the format of the event. Similarly, event producers push the event to routers in required format. 
+Routers will act as bridge between consumers and producers.
 - <b>Agile</b>: No custom code is required to poll the events; the event router will automatically push the events to consumers dynamically.
 This removes heavy coordination between producer and consumer services, speeding up development process.
 - <b>Scalable</b>: Since event producers, event routers and event consumers are decoupled, each can be scaled independently 
@@ -30,17 +29,18 @@ ___
 #### Application workflow
 1. Client's application writes the required file to client's on premise server s3 mount location (A mount point is an on premise directory to which NFS share is attached).
 2. As soon as new file lands in on-premise server mount point location, aws file gateway transfers the file to configured s3 bucket.
-3. As the file is created/available in s3 bucket (event producer), s3 sends an event to [Lambda function](lambda_functions/lambda_glue_job_trigger.py) with the file details. This achieved 
+3. As the file is created/available in s3 bucket (event producer), s3 sends an event to [Lambda function](lambda_functions/lambda_glue_job_trigger.py) with the file details. This is achieved 
 by adding a S3 PUT event trigger on lambda.
 4. The above Lambda function (event router) starts a [Glue Job](glue_jobs/search_revenue_glue_job.py) to process the input file.
 5. [Glue job](glue_jobs/search_revenue_glue_job.py) (event consumer) does the required processing to write the final output to S3 bucket. An EventBridge rule is executed if the glue job fails. 
 6. Event bridge rule triggers a [Lambda function](lambda_functions/lambda_glue_failure_notification.py).
 7. [Lambda function](lambda_functions/lambda_glue_failure_notification.py) publishes a failure message to sns topic. All subscribers of sns topic will get the glue job failure notification.
 
-In short:
-- event producer: Inbound s3 bucket object put's.
-- event router: lambda function.
-- event consumer: glue job.
+Main components of workflow:
+
+- Event producer: Inbound s3 bucket (trigger based on object put operation).
+- Event router: lambda function.
+- Event consumer: glue job.
 
 ___
 
@@ -58,7 +58,7 @@ generates the following resources:
 - <b>EC2 Instances</b> - Two ec2 instances: one for storage gateway medium and other to act as on premise server.
 - <b>Security groups</b> - To allow the inbound and outbound traffic to ec2 instances.
 - <b>Elastic IP</b> - To attach a fixed public ip to on premise EC2 instance.
-- <b>Glue Job</b> - To process the input file to calculate the revenue per search term
+- <b>Glue Job</b> - To process the input file to calculate the revenue per search keyword per domain.
 - <b>Lambda function</b> – Two lambda functions: one to trigger the glue job and other to publish a failure message to sns in case of glue job failure
 - <b>Event Bridge</b> - Rule to trigger a lambda function if the glue job fails.
 
@@ -94,7 +94,7 @@ if a service invokes a Lambda function and there is a service disruption, Lambda
 Availability Zone.
 
 AWS Glue is serverless ETL service that can automatically scale up and scale down the workers based on the workload.
-So based on client's file size no of workers for glue job can be configured accordingly to process it without OOM errors. 
+So based on client's file size number of workers for glue job can be configured accordingly to process it without Out-Of-Memory errors. 
 
 As mentioned in the requirements that client can send up to 10 GB file, A maximum of 2 G1.X worker types can be used in 
 glue configuration. Each worker maps to 1 DPU (4 vCPU, 16 GB of memory, 64 GB disk), and provides 1 executor per worker.
@@ -103,9 +103,9 @@ ___
 
 ### 8. Conclusion
 
-event-driven architecture is used to provide access to near-real-time information on revenue
-generated per each search term. This will help business to make faster decisions on fresh data.
-Not only that application checks many boxes related to lower cost, scalability and faster 
+Event-driven architecture is used to provide access to near-real-time information on revenue
+generated per each search term sorted by revenue. This will help business to make faster decisions on fresh data.
+In addition to solving the business requirement, this design also checks many boxes related to lower cost, scalability and faster 
 delivery (application is built within matter of days).
 
 ___
