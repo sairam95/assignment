@@ -27,12 +27,12 @@ This way, we are not paying for continuous polling to check for an event. This m
 #### Application workflow
 1. Client's application writes the required file to client's on premise server s3 mount location (A mount point is an on premise directory to which NFS share is attached).
 2. As soon as new file lands in on-premise server mount point location, aws file gateway transfers the file to configured s3 bucket.
-3. As the file is created/available in s3 bucket (event producer), s3 sends an event to [Lambda function](./lambda_glue_job_trigger.py) with the file details. This achieved 
+3. As the file is created/available in s3 bucket (event producer), s3 sends an event to [Lambda function](lambda_functions/lambda_glue_job_trigger.py) with the file details. This achieved 
 by adding a S3 PUT event trigger on lambda.
-4. The above Lambda function (event router) starts a [Glue Job](./search_revenue_glue_job.py) to process the input file.
-5. [Glue job](./search_revenue_glue_job.py) (event consumer) does the required processing to write the final output to S3 bucket. An EventBridge rule is executed if the glue job fails. 
-6. Event bridge rule triggers a [Lambda function](./lambda_glue_failure_notification.py).
-7. [Lambda function](./lambda_glue_failure_notification.py) publishes a failure message to sns topic. All subscribers of sns topic will get the glue job failure notification.
+4. The above Lambda function (event router) starts a [Glue Job](glue_jobs/search_revenue_glue_job.py) to process the input file.
+5. [Glue job](glue_jobs/search_revenue_glue_job.py) (event consumer) does the required processing to write the final output to S3 bucket. An EventBridge rule is executed if the glue job fails. 
+6. Event bridge rule triggers a [Lambda function](lambda_functions/lambda_glue_failure_notification.py).
+7. [Lambda function](lambda_functions/lambda_glue_failure_notification.py) publishes a failure message to sns topic. All subscribers of sns topic will get the glue job failure notification.
 
 In short:
 - event producer: Inbound s3 bucket object put's.
@@ -40,10 +40,10 @@ In short:
 - event consumer: glue job.
 
 ### 4. Deploying the solution with AWS Cloud Formation. 
-Except for storage gateway and fileshare all the other required resources can be created by deploying the AWS CloudFormation stacks i.e. [stack_1](./cf_app_infra_stack_1.yml) and [stack 2](./cf_app_infra_stack_2.yml).
+Except for storage gateway and fileshare all the other required resources can be created by deploying the AWS CloudFormation stacks i.e. [stack_1](cf_templates/cf_app_infra_stack_1.yml) and [stack 2](cf_templates/cf_app_infra_stack_2.yml).
 As CloudFormation does not directly support storage gateway and fileshare they are created and deployed manually following [aws documentation](https://docs.aws.amazon.com/storagegateway/latest/userguide/ec2-gateway-file.html).
 
-[stack_1](./cf_app_infra_stack_1.yml) is deployed initially to create a S3 bucket to store glue job code and then [stack_2](./cf_app_infra_stack_2.yml) which
+[stack_1](cf_templates/cf_app_infra_stack_1.yml) is deployed initially to create a S3 bucket to store glue job code and then [stack_2](cf_templates/cf_app_infra_stack_2.yml) which
 generates the following resources:
 
 - <b>IAM roles and policies</b> – We use the following AWS Identity and Access Management (IAM) roles:
@@ -59,9 +59,9 @@ generates the following resources:
 
 ##### Execution output of cloud formation stacks:
 
-[stack_1](./cf_app_infra_stack_1.yml) 
+[stack_1](cf_templates/cf_app_infra_stack_1.yml) 
 ![stack1_output](./images/stack1_output.png)
-[stack_2](./cf_app_infra_stack_2.yml) 
+[stack_2](cf_templates/cf_app_infra_stack_2.yml) 
 ![stack2_output](./images/stack2_output.png)
 
 
