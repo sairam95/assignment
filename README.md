@@ -66,8 +66,8 @@ generates the following resources:
 As shown in below images, final output of glue job is a tab delimited file written to an outbound s3 bucket folder. The folder name is in yyyy-mm-dd format 
 and file name is in "[yyyy-mm-dd]_SearchKeywordPerformance.tab" format ("yyyy-mm-dd" represents application execution date)
 
-[file_ouput_name](./images/file_output_name.png) 
-[file_ouput_format](./images/file_output_format.png) 
+![file_ouput_name](./images/file_output_name.png) 
+![file_ouput_format](./images/file_output_format.png) 
 
 
 ### 5. Application Performance
