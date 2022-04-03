@@ -53,7 +53,22 @@ generates the following resources:
 - <b>Lambda function</b> – Two lambda functions: one to trigger the glue job and other to publish a failure message to sns in case of glue job failure
 - <b>Event Bridge</b> - Rule to trigger a lambda function if the glue job fails.
 
+##### execution outputs of cloud formation stacks:
+
+[stack_1](./cf_app_infra_stack_1.yml) 
+![stack1_output](./images/stack1_output.png)
+[stack_2](./cf_app_infra_stack_2.yml) 
+![stack2_output](./images/stack2_output.png)
+
 ---
+
+### 5. Application Output
+As shown in below images, final output of glue job is a tab delimited file written to an outbound s3 bucket folder. The folder name is in yyyy-mm-dd format 
+and file name is in "[yyyy-mm-dd]_SearchKeywordPerformance.tab" format ("yyyy-mm-dd" represents application execution date)
+
+[file_ouput_name](./images/file_output_name.png) 
+[file_ouput_format](./images/file_output_format.png) 
+
 
 ### 5. Application Performance
 
@@ -73,17 +88,20 @@ glue configuration. Each worker maps to 1 DPU (4 vCPU, 16 GB of memory, 64 GB di
 
 ---
 
-### 7. Future Considerations
-
-Current application doesn't track the status of a given file run. So in case of any failure in custom code of 
+### 7. Future Enhancements
+1) Manual deployments of cloud formation templates can be automated using a build system like jenkins/GitHub 
+actions there by promoting Continous Delivery of pipeline.
+2) Current application doesn't track the status of a given file run. So in case of any failure in custom code of 
 glue job or lambda function, the workflow is not retired. In this case the application can be extended to develop 
 the pipeline for retries and failures using below extended architecture highlighted in red. 
+
+   1) A logging table in postgres/dynamo db can be used to track/log the status of the 
+   workflow for each file run at every stage. 
+   2) A separate process in lambda function can be run on a scheduled basis which reads the logging table to figure out all the failed runs based on
+   run status 
+   3) Lambda will have logic for re-triggering the glue jobs for all failed runs.
 
 ![retry architecture](./images/retry_architecture.png)
 
 
-1) A logging table in postgres/dynamo db can be used to track/log the status of the 
-workflow for each file run at every stage. 
-2) A separate process in lambda function can be run on a scheduled basis which reads the logging table to figure out all the failed runs based on
-run status 
-3) Lambda will have logic for re-triggering the glue jobs for all failed runs.
+

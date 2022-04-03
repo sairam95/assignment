@@ -12,15 +12,6 @@ from urllib.parse import parse_qs
 import re
 from datetime import date
 
-# @params: [JOB_NAME]
-args = getResolvedOptions(sys.argv, ['JOB_NAME', 's3_bucket', 's3_key'])
-
-sc = SparkContext()
-glueContext = GlueContext(sc)
-spark = glueContext.spark_session
-job = Job(glueContext)
-job.init(args['JOB_NAME'], args)
-
 
 class Constants:
     """
@@ -136,7 +127,7 @@ class SearchKeywordRevenue:
             3) creates a new column event_type which marks a record as one of following categories
               "search", "order complete", "other" and filters the data for "search"
         Args:
-            df: returns the spark dataframe with search and order complete event rows.
+            df: returns the transformed spark dataframe based on above steps.
 
         Returns:
 
@@ -164,9 +155,9 @@ class SearchKeywordRevenue:
 
     def calculate_revenue(self, df):
         """
-        Filters the transformed data for search and order complete events
-        and ranks it for each ip address based on order of events (hit_time) performed by user.
-        Finally, calculates the revenue for each domain and each search keyword.
+        1) Filters the transformed data for search and order complete events
+        2) Ranks above dataframe for each ip address based on order of events (hit_time) performed by user.
+        3) Finally, calculates the revenue for each domain and each search keyword.
 
         Args:
             df: hit level data with event_type information
@@ -224,9 +215,23 @@ class SearchKeywordRevenue:
         self.write_df_to_s3(revenue_df)
 
 
-input_file_location = "s3a://{0}/{1}".format(args['s3_bucket'], args['s3_key'])
-output_file_location = "s3a://client-outbound/{0}/{0}_SearchKeywordPerformance.tab".format(str(date.today()))
-skr = SearchKeywordRevenue(input_file_location=input_file_location, output_file_location=output_file_location)
-skr.process_file()
+if __name__ == '__main__':
+    # parsing the arguments passed to glue job from lambda
+    args = getResolvedOptions(sys.argv, ['JOB_NAME', 's3_bucket', 's3_key'])
 
-job.commit()
+    # intializing the spark enviornment
+    sc = SparkContext()
+    glueContext = GlueContext(sc)
+    spark = glueContext.spark_session
+    job = Job(glueContext)
+    job.init(args['JOB_NAME'], args)
+
+    # constructing file locations
+    input_file_location = "s3a://{0}/{1}".format(args['s3_bucket'], args['s3_key'])
+    output_file_location = "s3a://client-outbound/{0}/{0}_SearchKeywordPerformance.tab".format(str(date.today()))
+
+    # Instantiating the class to run the application
+    skr = SearchKeywordRevenue(input_file_location=input_file_location, output_file_location=output_file_location)
+    skr.process_file()
+
+    job.commit()
