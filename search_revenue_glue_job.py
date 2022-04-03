@@ -221,7 +221,7 @@ class SearchKeywordRevenue:
 
 
 input_file_location = "s3a://{0}/{1}".format(args['s3_bucket'], args['s3_key'])
-output_file_location = "s3a://adobe-outbound/{0}/{0}_SearchKeywordPerformance.tab".format(str(date.today()))
+output_file_location = "s3a://client-outbound/{0}/{0}_SearchKeywordPerformance.tab".format(str(date.today()))
 skr = SearchKeywordRevenue(input_file_location=input_file_location, output_file_location=output_file_location)
 skr.process_file()
 

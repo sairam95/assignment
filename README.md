@@ -28,23 +28,24 @@ workloads that are:
 2. As soon as new file lands in on-premise server mount point location, aws file gateway transfers the file to configured s3 bucket.
 3. As the file is created/available in s3 bucket, s3 sends an event to [Lambda function](./lambda_glue_job_trigger.py) with the file details. This acheived 
 by adding a S3 PUT event trigger on lambda.
-4. The above Lambda function starts a [Glue Job](./revenue_glue_job.py) to process the input file.
-5. [Glue job](./revenue_glue_job.py) does the required processing to write the final output to S3 bucket. An EventBridge rule is executed if the glue job fails. 
+4. The above Lambda function starts a [Glue Job](./search_revenue_glue_job.py) to process the input file.
+5. [Glue job](./search_revenue_glue_job.py) does the required processing to write the final output to S3 bucket. An EventBridge rule is executed if the glue job fails. 
 6. Event bridge rule triggers a [Lambda function](./lambda_glue_failure_notification.py).
 7. [Lambda function](./lambda_glue_failure_notification.py) publishes a failure message to sns topic. All subscribers of sns topic will get the glue job failure notification.
 
 ---
 
 ### 4. Deploying the solution with AWS Cloud Formation. 
-By deploying the provided [AWS CloudFormation stack](./cf_app_infra.yml) all the required resources  can be created other than storage gateway and fileshare.
+Except for storage gateway and fileshare all the other required resources can be created by deploying the AWS CloudFormation stacks i.e. [stack_1](./cf_app_infra_stack_1.yml) and [stack 2](./cf_app_infra_stack_2.yml).
 As ClouFormation does not directly support storage gateway and fileshare they are created and deployed manually following [aws documentation](https://docs.aws.amazon.com/storagegateway/latest/userguide/ec2-gateway-file.html).
 
-Cloud Formation template generates the following resources:
+[stack_1](./cf_app_infra_stack_1.yml) is deployed initially to create a S3 bucket to store glue job code and then [stack_2](./cf_app_infra_stack_2.yml) which
+generates the following resources:
 
 - <b>IAM roles and policies</b> – We use the following AWS Identity and Access Management (IAM) roles:
-  - adobeGlueServicerole: Role for glue job to access s3 buckets to read and write the data.
-  - lambdaGlueTrigger: Role for lambda to trigger glue jobs and publishing messages to sns topics.
-- <b>S3 bucket</b> – This is used to store data, job scripts, and output files generated during the AWS Glue ETL job run.
+  - client_glue_service_role: Role for glue job to access s3 buckets to read and write the data.
+  - client_lambda_service_role: Role for lambda to trigger glue jobs and publishing messages to sns topics.
+- <b>S3 bucket</b> – This is used to store client input data transferred by storage gateway from client's server.
 - <b>EC2 Instances</b> - Two ec2 instances: one for storage gateway medium and other to act as on premise server.
 - <b>Security groups</b> - To allow the inbound and outbound traffic to ec2 instances.
 - <b>Elastic IP</b> - To attach a fixed public ip to on premise EC2 instance.

@@ -3,18 +3,20 @@ Description: "CF Template to create the infrastructure required for application.
 Parameters:
   InboundBucketName:
     Type: String
+  OutboundBucketName:
+    Type: String
 Resources:
     SNSTopic:
         Type: "AWS::SNS::Topic"
         Properties:
-            DisplayName: ""
+            DisplayName: "adobe_execise_sns_2"
             TopicName: "adobe_execise_sns_2"
 
     SNSTopic2:
         Type: "AWS::SNS::Topic"
         Properties:
-            DisplayName: ""
-            TopicName: "adobe_glue_job_failure_2"
+            DisplayName: "client_glue_job_failure"
+            TopicName: "client_glue_job_failure"
 
     SNSSubscription:
         Type: "AWS::SNS::Subscription"
@@ -39,12 +41,39 @@ Resources:
               - !Ref SNSTopic2
 
     IAMPolicy:
+        Type: 'AWS::IAM::Policy'
+        Properties:
+          PolicyName: client-s3-access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 's3:*'
+                Resource:
+                  - "arn:aws:s3:::adobe-app-code/*"
+                  - !Sub "arn:aws:s3:::${InboundBucketName}/*"
+                  - !Sub "arn:aws:s3:::${OutboundBucketName}/*"
+          Roles:
+            - !Ref IAMRole
+
+    IAMPolicy2:
         Type: "AWS::IAM::Policy"
         Properties:
-            PolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":[\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::databricks-prod-public-cfts/*\"],\"Effect\":\"Allow\"},{\"Action\":[\"s3:GetObject\",\"s3:PutObject\",\"s3:DeleteObject\"],\"Resource\":[\"arn:aws:s3:::databricks-workspace-stack-lambdazipsbucket-sni7q4u0bua/*\"],\"Effect\":\"Allow\"}]}"
-            Roles:
-              - "databricks-workspace-stack-CopyZipsRole-U9IYIF6J5DCV"
-            PolicyName: "lambda-copier_2"
+          PolicyDocument: |
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "VisualEditor0",
+                        "Effect": "Allow",
+                        "Action": "glue:StartJobRun",
+                        "Resource": "*"
+                    }
+                ]
+            }
+          Roles:
+            - !Ref IAMRole2
+          PolicyName: "glue-trigger"
 
     IAMRole:
         Type: "AWS::IAM::Role"
@@ -54,7 +83,7 @@ Resources:
             AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"glue.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
             MaxSessionDuration: 3600
             ManagedPolicyArns:
-              - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+              - "arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"
               - "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
             Description: "Allows Glue to call AWS services on your behalf. "
 
@@ -68,19 +97,8 @@ Resources:
             ManagedPolicyArns:
               - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
               - "arn:aws:iam::aws:policy/AmazonSNSFullAccess"
-              - !Sub "arn:aws:iam::${AWS::AccountId}:policy/triggerGlueJob"
             Description: "Allows Lambda functions to call AWS services on your behalf."
 
-    IAMRole3:
-        Type: "AWS::IAM::Role"
-        Properties:
-            Path: "/"
-            RoleName: "client_s3_fullaccess"
-            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"s3.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
-            MaxSessionDuration: 3600
-            ManagedPolicyArns:
-              - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
-            Description: "Allows S3 to call AWS services on your behalf."
     EC2Instance:
         Type: "AWS::EC2::Instance"
         Properties:
@@ -212,7 +230,7 @@ Resources:
     LambdaFunction:
         Type: "AWS::Lambda::Function"
         Properties:
-            Description: ""
+            Description: "Function to trigger revenue glue job"
             FunctionName: "client_glue_job_trigger"
             Handler: "index.lambda_handler"
             Architectures:
@@ -228,7 +246,7 @@ Resources:
                   def lambda_handler(_event, _context):
 
                       glue = boto3.client('glue')
-                      gluejobname = "adobe_exercise_glue_job"
+                      gluejobname = "client_search_revenue_glue_job"
                       bucket = _event['Records'][0]['s3']['bucket']['name']
                       key = urllib.parse.unquote_plus(_event['Records'][0]['s3']['object']['key'], encoding='utf-8')
                       try:
@@ -251,7 +269,7 @@ Resources:
     LambdaFunction2:
         Type: "AWS::Lambda::Function"
         Properties:
-            Description: ""
+            Description: "Function to publish glue job failure msg to sns"
             FunctionName: "client_glue_job_failure"
             Handler: "index.lambda_handler"
             Architectures:
@@ -292,7 +310,7 @@ Resources:
                     if sns_message != '':
                         sns.publish(
                             Message = sns_message,
-                            TargetArn = 'arn:aws:sns:us-east-1:635547918647:adobe_glue_job_failure'
+                            TargetArn = 'arn:aws:sns:us-east-1:635547918647:client_glue_job_failure'
                         )
             MemorySize: 128
             Role: !GetAtt IAMRole2.Arn
@@ -321,13 +339,18 @@ Resources:
     S3Bucket:
         Type: "AWS::S3::Bucket"
         Properties:
-            BucketName: "client-outbound"
+            BucketName: !Ref OutboundBucketName
             BucketEncryption:
                 ServerSideEncryptionConfiguration:
                   -
                     ServerSideEncryptionByDefault:
                         SSEAlgorithm: "AES256"
                     BucketKeyEnabled: false
+            PublicAccessBlockConfiguration:
+                BlockPublicAcls: true
+                BlockPublicPolicy: true
+                IgnorePublicAcls: true
+                RestrictPublicBuckets: true
 
     S3Bucket2:
         Type: "AWS::S3::Bucket"
@@ -345,6 +368,12 @@ Resources:
                 LambdaConfigurations:
                   - Event: "s3:ObjectCreated:Put"
                     Function: !GetAtt LambdaFunction.Arn
+            PublicAccessBlockConfiguration:
+                BlockPublicAcls: true
+                BlockPublicPolicy: true
+                IgnorePublicAcls: true
+                RestrictPublicBuckets: true
+
     EventsRule:
         Type: "AWS::Events::Rule"
         Properties:
@@ -354,7 +383,7 @@ Resources:
                 "source": ["aws.glue"],
                 "detail-type": ["Glue Job State Change"],
                 "detail": {
-                  "jobName": ["adobe_exercise_glue_job"],
+                  "jobName": ["client_search_revenue_glue_job"],
                   "state": ["FAILED"]
                 }
               }
@@ -368,25 +397,15 @@ Resources:
     GlueJob:
         Type: "AWS::Glue::Job"
         Properties:
-            Name: "client_revenue_glue_job"
-            Description: ""
+            Name: "client_search_revenue_glue_job"
+            Description: "Glue Job to calculate the revenue per search keyword"
             Role: !GetAtt IAMRole.Arn
             ExecutionProperty:
                 MaxConcurrentRuns: 1
             Command:
                 Name: "glueetl"
-                ScriptLocation: !Sub "s3://adobe-app-code/revenue_glue_job.py"
+                ScriptLocation: "s3://adobe-app-code/search_revenue_glue_job.py"
                 PythonVersion: "3"
-            DefaultArguments:
-                --TempDir: !Sub "s3://aws-glue-assets-${AWS::AccountId}-${AWS::Region}/temporary/"
-                --class: "GlueApp"
-                --enable-continuous-cloudwatch-log: "true"
-                --enable-glue-datacatalog: "true"
-                --enable-metrics: "true"
-                --enable-spark-ui: "true"
-                --job-bookmark-option: "job-bookmark-enable"
-                --job-language: "python"
-                --spark-event-logs-path: !Sub "s3://aws-glue-assets-${AWS::AccountId}-${AWS::Region}/sparkHistoryLogs/"
             MaxRetries: 0
             Timeout: 20
             GlueVersion: "3.0"
