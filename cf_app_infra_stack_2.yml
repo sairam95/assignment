@@ -5,6 +5,12 @@ Parameters:
     Type: String
   OutboundBucketName:
     Type: String
+  GlueTriggerLambdaName:
+    Type: String
+  SnsPublishLambdaName:
+    Type: String
+  GlueJobName:
+    Type: String
 Resources:
     SNSTopic:
         Type: "AWS::SNS::Topic"
@@ -231,7 +237,7 @@ Resources:
         Type: "AWS::Lambda::Function"
         Properties:
             Description: "Function to trigger revenue glue job"
-            FunctionName: "client_glue_job_trigger"
+            FunctionName:  !Ref GlueTriggerLambdaName #"client_glue_job_trigger"
             Handler: "index.lambda_handler"
             Architectures:
               - "x86_64"
@@ -270,7 +276,7 @@ Resources:
         Type: "AWS::Lambda::Function"
         Properties:
             Description: "Function to publish glue job failure msg to sns"
-            FunctionName: "client_glue_job_failure"
+            FunctionName: !Ref SnsPublishLambdaName #"client_glue_job_failure"
             Handler: "index.lambda_handler"
             Architectures:
               - "x86_64"
@@ -397,7 +403,7 @@ Resources:
     GlueJob:
         Type: "AWS::Glue::Job"
         Properties:
-            Name: "client_search_revenue_glue_job"
+            Name: !Ref GlueJobName #client_search_revenue_glue_job
             Description: "Glue Job to calculate the revenue per search keyword"
             Role: !GetAtt IAMRole.Arn
             ExecutionProperty:

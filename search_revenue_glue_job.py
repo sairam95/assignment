@@ -83,7 +83,7 @@ udfextractSearchKeyword = f.udf(extract_search_keyword, StringType())
 
 class SearchKeywordRevenue:
     """
-    This class composes of functions to calculate the revenue that client getting
+    This class composes of functions to calculate the revenue that client is generating
     from external Search Engines, such as Google, Yahoo and MSN, and which keywords are performing
     the best based on revenue?
 
@@ -135,7 +135,6 @@ class SearchKeywordRevenue:
             2) extracts the domain and search keyword respectively from the referrer url.
             3) creates a new column event_type which marks a record as one of following categories
               "search", "order complete", "other" and filters the data for "search"
-            4) ranks the data for each ip address based on order of events performed by user.
         Args:
             df: returns the spark dataframe with search and order complete event rows.
 
@@ -161,8 +160,23 @@ class SearchKeywordRevenue:
             ~f.col("domain").isNull() & ~f.col("searchKeyword").isNull(), "search")
                                                                        .when(f.col("event_list") == 1, "order complete")
                                                                        .otherwise("other"))
+        return domain_search_keyword_df
+
+    def calculate_revenue(self, df):
+        """
+        Filters the transformed data for search and order complete events
+        and ranks it for each ip address based on order of events (hit_time) performed by user.
+        Finally, calculates the revenue for each domain and each search keyword.
+
+        Args:
+            df: hit level data with event_type information
+
+        Returns:
+
+        """
+
         # filtering the dataframe with records for just search event and order completion event
-        search_order_comp_df = domain_search_keyword_df.filter(
+        search_order_comp_df = df.filter(
             (f.col("event_type") == "search") | (f.col("event_type") == "order complete"))
 
         # ranking the search and order complete events for each ip address by hit time. Later this rank will be used
@@ -170,18 +184,8 @@ class SearchKeywordRevenue:
         window_spec = Window.partitionBy("ip").orderBy("hit_time_gmt")
         ranked_df = search_order_comp_df.withColumn('total_revenue', f.col('total_revenue').cast("int")) \
             .withColumn("rank", f.rank().over(window_spec))
-        return ranked_df
 
-    def calculate_revenue(self, df):
-        """
-        calculates the revenue for each domain and each search keyword.
-        Args:
-            df:
-
-        Returns:
-
-        """
-        df.createOrReplaceTempView("hit_level_data")
+        ranked_df.createOrReplaceTempView("hit_level_data")
         # Filtering the search event rows
         spark.sql("select ip, domain, searchKeyword, total_revenue, rank "
                   "from hit_level_data where event_type ='search'").createOrReplaceTempView("search_event_df")
