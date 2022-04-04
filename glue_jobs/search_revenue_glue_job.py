@@ -13,14 +13,6 @@ import re
 from datetime import date
 
 
-class Constants:
-    """
-    Class to store all the constant variables.
-    """
-    Q_PARAM_DOMAINS = ["bing.com", "google.com"]
-    P_PARAM_DOMAINS = ["yahoo.com"]
-
-
 # function to extract domain from referrer
 def extract_domains(url):
     """
@@ -40,7 +32,7 @@ udfextractDomains = f.udf(extract_domains, StringType())
 
 
 # udf to extract the SearchKeyword
-def extract_search_keyword(url, domain):
+def extract_search_keyword(url):
     """
     Function to parse the search keyword from referrer url based on domain.
     Args:
@@ -52,10 +44,11 @@ def extract_search_keyword(url, domain):
 
     """
     parsed_url = urlparse(url)
-    if domain in Constants.P_PARAM_DOMAINS:
-        parsed_keyword = parse_qs(parsed_url.query)['p'][0]
-    elif domain in Constants.Q_PARAM_DOMAINS:
-        parsed_keyword = parse_qs(parsed_url.query)['q'][0]
+    parsed_search_input_dict = parse_qs(parsed_url.query)
+    if 'p' in parsed_search_input_dict:
+        parsed_keyword = parsed_search_input_dict['p'][0]
+    elif 'q' in parsed_search_input_dict:
+        parsed_keyword = parsed_search_input_dict['q'][0]
     else:
         parsed_keyword = None
 
@@ -143,7 +136,7 @@ class SearchKeywordRevenue:
 
         # extracting the domain and search keyword from referrer url as seperate columns
         domain_search_keyword_df = transformed_df.withColumn("domain", udfextractDomains("referrer")) \
-            .withColumn("searchKeyword", udfextractSearchKeyword("referrer", "domain"))
+            .withColumn("searchKeyword", udfextractSearchKeyword("referrer"))
 
         # creating an event_type column for each row with one of the following possible values
         # "search", "order complete", "other".
