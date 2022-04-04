@@ -23,8 +23,9 @@ def extract_domains(url):
     Returns(str):
         Returns google.com/yahoo.com/bing.com etc from search urls.
     """
-    domain = urlparse(url).netloc
-    return '.'.join(domain.split('.')[1:]).lower()
+    m = re.search('https?://([A-Za-z_0-9.-]+).*', url)
+    if m:
+        return m.group(1).lower().replace('www.', '')
 
 
 # converting above function to spark udf
